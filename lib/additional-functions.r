@@ -25,9 +25,11 @@ between_within_descriptives <- function(variables, id, data, na.rm=TRUE) {
     mean_of_means <-  apply(gdata, 2, mean, na.rm=TRUE)
     sd_of_means <- apply(gdata, 2, sd, na.rm=TRUE)
     
-    
     split_data <-  split(data[,variables], data[,id])
+    
+    
     sds <- data.frame(t(sapply(split_data, function(X) sapply(X, function(Y) sd(Y, na.rm=TRUE)))))
+    sds <- na.omit(sds)
     mean_of_sds <- sapply(sds, mean)
     sd_of_sds <- sapply(sds, sd)
     data.frame(mean_of_means, sd_of_means, mean_of_sds, sd_of_sds)

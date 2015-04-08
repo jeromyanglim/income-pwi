@@ -1,14 +1,20 @@
+This is my analysis report.
+
+First the intialise the project.
 ```{r}
 if(basename(getwd()) == "reports") setwd("..") # necessary to work with projecttemplate
 library(ProjectTemplate); load.project()
 ```     
 
+
+
 ```{r}
 # income: income category
 
+cclong$month
 head(cclong)
 
-cclong$income_text
+table(cclong$income_text)
 sapply(cclong[,v$demographics], function(X) table(X, useNA="always"))
 cclong[,v$demographics], function(X) table(X, useNA="always"))
 ```
@@ -16,15 +22,57 @@ cclong[,v$demographics], function(X) table(X, useNA="always"))
 ```{r}
 table(cclong$wave, cclong$income)
 table( cclong$income_text, cclong$wave)
-table(cclong$income_text, cclong$income)
+table(cclong$income_text, cclong$income, useNA = 'always')
 ```
 
 ```{r}
-p <- ggplot(cclong, aes(x=age_est, y=income)) + 
+
+# age and income
+p <- ggplot(cclong, aes(x=age_est, y=income_cpiadjusted)) + 
     geom_point(position=position_jitter(width=.1), size=1) + geom_smooth()
 p <- p + scale_x_continuous(name="Age (years)") +
      scale_y_continuous(name="income")
 p
+
+# income and pwi
+p <- ggplot(cclong, aes(x=income_cpilog, y=pwi_mean)) + 
+    geom_point(position=position_jitter(width=.1), size=1) + geom_smooth()
+p <- p + scale_x_continuous(name="Income") +
+     scale_y_continuous(name="PWI")
+p
+
+
+
+within_person_correlation(variables = c("income", "pwi_mean"), id = "user_id", data=cclong, use="pair")
+
+x <- na.omit(cclong[,c("user_id", "income", "pwi_mean")])
+
+between_within_descriptives(variables = c("income", "pwi_mean"), id = "user_id",  data=x)
+
+
+fits <- list() 
+fits$mod1 <- lm(pwi_mean ~ income, data=cclong)
+fits$mod2 <- lm(pwi_mean ~ income + I(income^2), data=cclong)
+fits$mod3 <- lm(pwi_mean ~ income + I(income^2) + age_est, data=cclong)
+fits$mod4 <- lm(pwi_mean ~ income + I(income^2) + age_est + I((age_est-62)^2), data=cclong)
+fits$mod5 <- lm(pwi_mean ~ income * I(age_est - 62), data=cclong)
+
+lapply(fits, summary)
+
+cclong2 <- cclong[!is.na(cclong$income), ]
+nlsfit <- nls(pwi_mean ~ alpha + beta*income^(gamma), start=list(alpha=6, beta=1, gamma=.2), data=cclong2)
+plot(cclong2$income, cclong2$pwi_mean, pch='.')
+points(cclong2$income, predict(nlsfit))
+str(nlsfit)
+
+nlsfit$fit2 <- nls(pwi_mean ~ alpha + beta*income, start=list(alpha=6, beta=1), data=cclong2)
+nlsfit$fit2
+
+
+
+```
+
+```{r}
 
 p1 <- ggplot(cclong, aes(x=income)) + scale_x_continuous(limits = c(0,10))
 p1 + geom_histogram(binwidth=.3)
@@ -40,15 +88,8 @@ p <- p + facet_wrap(~user_id, ncol=6)
 p
 
 
-# income and pwi
-p <- ggplot(cclong, aes(x=income, y=pwi_mean)) + 
-    geom_point(position=position_jitter(width=.1), size=1) + geom_smooth()
-p <- p + scale_x_continuous(name="Income") +
-     scale_y_continuous(name="PWI")
-p
-
-
 
 ```
+
 
 

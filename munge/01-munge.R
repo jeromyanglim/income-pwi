@@ -194,9 +194,25 @@ rcases$waves_completed <- rcases$waves_completed2
 rcases$waves_completed2 <- NULL
 
 
+# cpi processing
+cpi <-  reshape(meta.cpi, varying=c("quarter1", "quarter2", "quarter3", "quarter4"),
+        v.names="cpi",
+        timevar="quarter",
+        times=1:4,
+        new.row.names=1:1000,
+        direction="long")
+cpi$id <- NULL
+cclong$quarter <- ceiling(cclong$month / 3)
+cclong <- merge(cclong, cpi, all.x=TRUE)
 
+# income processing
+cclong <- merge(cclong, meta.income, by.x='income', by.y='original_number', all.x=TRUE)
+cclong$income_raw <- cclong$initial_estimate
+cclong$income_cpi <- cclong$income_raw / (cclong$cpi / 100)
+cclong$income_cpilog <- log(cclong$income_cpi) 
 
-
+lm(income_raw~year, cclong)
+lm(income_cpiadjusted~year, cclong)
 
 
 
