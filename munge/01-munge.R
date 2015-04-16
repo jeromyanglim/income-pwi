@@ -211,8 +211,27 @@ cclong$income_raw <- cclong$initial_estimate
 cclong$income_cpi <- cclong$income_raw / (cclong$cpi / 100)
 cclong$income_cpilog <- log(cclong$income_cpi) 
 
-lm(income_raw~year, cclong)
-lm(income_cpiadjusted~year, cclong)
+
+# missing data
+rlong <- cclong
+cclong <- cclong[!is.na(cclong$income_cpi), ]
+# retain cases with 5 or more observations after removing missing
+retain_cases <- as.numeric(names(table(cclong$user_id)[table(cclong$user_id) >= 5]))
+cclong <- cclong[cclong$user_id %in% retain_cases, ]
+rcases <- rcases[rcases$user_id %in% retain_cases, ]
+
+#
+temp <- aggregate(income_cpilog ~ user_id, cclong, sd)
+names(temp) <- c('user_id', "sd_income_cpilog")
+rcases  <- merge(rcases, temp, all.x=TRUE)
+
+
+
+
+
+
+
+
 
 
 

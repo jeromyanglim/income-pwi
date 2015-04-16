@@ -25,10 +25,13 @@ table( cclong$income_text, cclong$wave)
 table(cclong$income_text, cclong$income, useNA = 'always')
 ```
 
+# changes in comes
+
+
 ```{r}
 
 # age and income
-p <- ggplot(cclong, aes(x=age_est, y=income_cpiadjusted)) + 
+p <- ggplot(cclong, aes(x=age_est, y=income_cpilog)) + 
     geom_point(position=position_jitter(width=.1), size=1) + geom_smooth()
 p <- p + scale_x_continuous(name="Age (years)") +
      scale_y_continuous(name="income")
@@ -41,13 +44,21 @@ p <- p + scale_x_continuous(name="Income") +
      scale_y_continuous(name="PWI")
 p
 
+# between person correlations
+cor(cclong$income_cpilog, cclong$pwi_mean)
 
-
+# within person correlation
 within_person_correlation(variables = c("income", "pwi_mean"), id = "user_id", data=cclong, use="pair")
 
-x <- na.omit(cclong[,c("user_id", "income", "pwi_mean")])
+nrow(rcases)
+ids_highsd <- rcases[rcases$sd_income_cpilog > 0.5, "user_id"]
+length(ids_highsd)
+within_person_correlation(variables = c("income", "pwi_mean"), id = "user_id", 
+                          data=cclong[ cclong$user_id %in% ids_highsd, ], use="pair")
 
-between_within_descriptives(variables = c("income", "pwi_mean"), id = "user_id",  data=x)
+between_within_descriptives(variables = c("income", "pwi_mean"), id = "user_id",  data=cclong)
+
+
 
 
 fits <- list() 
@@ -69,27 +80,54 @@ nlsfit$fit2 <- nls(pwi_mean ~ alpha + beta*income, start=list(alpha=6, beta=1), 
 nlsfit$fit2
 
 
-
 ```
 
+# Income stability and change
 ```{r}
-
 p1 <- ggplot(cclong, aes(x=income)) + scale_x_continuous(limits = c(0,10))
 p1 + geom_histogram(binwidth=.3)
 
-sids <- sample(rcases[rcases$waves_completed == 10, 'user_id'], 36)
+sids <- sample(rcases[rcases$waves_completed == 10, 'user_id'], 48)
 cclong10 <- cclong[ cclong$user_id %in% sids, ]
     
-p <- ggplot(cclong10, aes(time0, income)) +  geom_point()
+p <- ggplot(cclong10, aes(time0, income_cpilog)) +  geom_point()
 # p <- p + geom_line(aes(x=trial, y=yhat, linetype=Model))
-p <- p + scale_y_continuous("income", limits=c(0, 7)) + 
+p <- p + scale_y_continuous("income") + 
     scale_x_continuous("Measurement occasion",  limits=c(-0.5, 9.5), breaks=c(0,1,2,3,4,5,6,7,8,9))
 p <- p + facet_wrap(~user_id, ncol=6) 
 p
 
+# index of proportion of variance explained by between person factors
+multilevel::mult.icc(cclong[ ,c("pwi_mean", "income_cpilog"), drop=FALSE],  factor(cclong$user_id))[,1:2]
+
+
+x <- aggregate(income_cpilog ~ user_id, cclong, sd)
+p1 <- ggplot(x, aes(x=income_cpilog)) + scale_x_continuous(limits = c(0,2.5))
+p1 + geom_histogram(binwidth=.05)
+
+
+cor(rcases$sd_income_cpilog, rcases$age_first_wave)
+plot(rcases$age_first_wave, rcases$sd_income_cpilog)
+p <- ggplot(rcases, aes(x=age_first_wave, y=sd_income_cpilog)) + 
+    geom_point(position=position_jitter(width=.1), size=1) + geom_smooth()
+p
+
+```
+
+
+# Gender 
+```{r}
+fit <- lm(pwi_mean ~ income_cpilog * age_est, cclong)
+
+p <- ggplot(cclong, aes(x=income_cpilog, y=pwi_mean, colour=male)) + 
+    geom_point(position=position_jitter(width=.1), size=1) + geom_smooth()
+p <- p + scale_x_continuous(name="Income") +
+     scale_y_continuous(name="PWI")
+p
 
 
 ```
+
 
 
 
