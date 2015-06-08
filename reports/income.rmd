@@ -16,7 +16,7 @@ head(cclong)
 
 table(cclong$income_text)
 sapply(cclong[,v$demographics], function(X) table(X, useNA="always"))
-cclong[,v$demographics], function(X) table(X, useNA="always"))
+cclong[,v$demographics], function(X) table(X, useNA="always")
 ```
 
 ```{r}
@@ -42,6 +42,13 @@ p <- ggplot(cclong, aes(x=income_cpilog, y=pwi_mean)) +
     geom_point(position=position_jitter(width=.1), size=1) + geom_smooth()
 p <- p + scale_x_continuous(name="Income") +
      scale_y_continuous(name="PWI")
+p
+
+# age and pwi
+p <- ggplot(cclong, aes(x=age_est, y=pwi_mean)) + 
+    geom_point(position=position_jitter(width=.1), size=1) + geom_smooth()
+p <- p + scale_x_continuous(name="Age (years)") +
+     scale_y_continuous(name="pwi")
 p
 
 # between person correlations
@@ -111,13 +118,13 @@ plot(rcases$age_first_wave, rcases$sd_income_cpilog)
 p <- ggplot(rcases, aes(x=age_first_wave, y=sd_income_cpilog)) + 
     geom_point(position=position_jitter(width=.1), size=1) + geom_smooth()
 p
-
 ```
 
 
 # Gender 
 ```{r}
 fit <- lm(pwi_mean ~ income_cpilog * age_est, cclong)
+summary(fit)
 
 p <- ggplot(cclong, aes(x=income_cpilog, y=pwi_mean, colour=male)) + 
     geom_point(position=position_jitter(width=.1), size=1) + geom_smooth()
@@ -128,6 +135,62 @@ p
 
 ```
 
+# Explore multilevel modelling
+```{r}
+library(lme4)
+
+# y ~ a_i
+fit1 <- lmer(pwi_mean ~ 1 + (1  | user_id),  data=cclong)
+
+# y ~ a_i + income_cpilog
+fit2 <- lmer(pwi_mean ~ 1 + scale(income_cpilog) + (1  | user_id),  data=cclong)
+anova(fit1, fit2)
+
+# y ~ a_i + income_cpilog
+fit2 <- lmer(pwi_mean ~ 1 + scale(income_cpilog) + (1  | user_id),  data=cclong)
+
+# y ~ a_i + income_cpilog
+cclong$income_cpilogz <- scale(cclong$income_cpilog)
+fit3 <- lmer(pwi_mean ~ 1 + income_cpilogz + (1 + income_cpilogz  | user_id),  data=cclong)
+summary(fit3)
+anova(fit2, fit3)
+
+# add age
+# y ~ a_i + income_cpilog
+fit4 <- lmer(pwi_mean ~ 1 + income_cpilogz + scale(age_est) + (1  | user_id),  data=cclong)
+summary(fit4)
+
+# y ~ a_i + income_cpilog
+fit5 <- lmer(pwi_mean ~ 1 + income_cpilogz + scale(age_est) + I(scale(age_est)^2) + I(scale(age_est)^3) + 
+                 (1  | user_id),  data=cclong)
+summary(fit5)
+anova(fit4, fit5)
+
+# y ~ a_i + income_cpilog
+fit6 <- lmer(pwi_mean ~ 1 + income_cpilogz * scale(age_est) + I(scale(age_est)^2) + I(scale(age_est)^3) + 
+                 (1  | user_id),  data=cclong)
+summary(fit6)
+anova(fit5, fit6)
+
+# y ~ a_i + income_cpilog
+fit7 <- lmer(pwi_mean ~ 1 + income_cpilogz * scale(age_est) + I(income_cpilogz^2) + I(scale(age_est)^2) + 
+                 I(scale(age_est)^3) + (1  | user_id),  data=cclong)
+summary(fit2)
+summary(fit7)
+anova(fit5, fit6)
+
+
+summary(fit2)
+plot(fit5, pch=".")
+
+
+
+
+anova(fit2, fit3)
+summary(fit4)
+
+
+```
 
 
 
